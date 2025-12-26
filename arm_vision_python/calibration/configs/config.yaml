@@ -1,0 +1,37 @@
+# 标定板类型: "chessboard" (棋盘格) 或 "circles_grid" (对称圆形网格)
+pattern_type: "chessboard"
+
+# 标定板的尺寸 (内部角点或圆心的数量)
+pattern_cols: 10  # 列数
+pattern_rows: 7  # 行数
+
+# 标定板每个单元的物理尺寸 (单位: 毫米)
+# 如果是棋盘格，则为方格的边长
+# 如果是圆形网格，则为相邻圆心的距离
+unit_size_mm: 18.0
+
+# 采集的图像数量
+num_images: 50
+
+# 相机参数
+camera:
+    left_index: 4
+    right_index: 2
+
+# test_rectification.py specific
+stereo_params_file: 'calibration/output/stereo_params.yaml'
+test_image_left: 'calibration/images/left_023.jpg'
+test_image_right: 'calibration/images/right_023.jpg'
+
+output_paths:
+    rectified_pair: 'calibration/output/rectified_pair.jpg'
+    disparity_map: 'calibration/output/disparity_map.jpg'
+
+sgbm:
+    window_size: 5
+    min_disparity: 0
+    num_disparities: 96 # 16 * 6
+    disp12_max_diff: 1
+    uniqueness_ratio: 10
+    speckle_window_size: 100
+    speckle_range: 32
