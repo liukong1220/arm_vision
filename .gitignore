@@ -12,3 +12,6 @@ dist
 *.egg-info
 </import>
 .marscode/
+images/
+imgs/
+output/
