@@ -5,4 +5,6 @@ add_library(tools OBJECT
     math_tools.cpp
     logger.cpp
     exiter.cpp
+    crc.cpp
+    recorder.cpp
 )

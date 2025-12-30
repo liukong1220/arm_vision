@@ -1,7 +1,14 @@
 #include <fmt/core.h>
 #include <opencv2/opencv.hpp>
 #include <filesystem>
+#include <fstream>
 #include <yaml-cpp/yaml.h>
+
+// #include <Eigen/Dense>
+
+#include "tools/logger.hpp"
+#include "tools/math_tools.hpp"
+#include "tools/img_tools.hpp"
 
 const std::string keys =
     "{help h usage ? | | Print this message}"
@@ -9,52 +16,38 @@ const std::string keys =
     "{@left-folder   | imgs/left/ | Path to save left images}"
     "{@right-folder  | imgs/right/ | Path to save right images}";
 
-// --- 配置参数 ---
-// 摄像头模组输出的最大分辨率 (根据规格书)
-const int WIDTH = 1080;
-const int HEIGHT = 640;
-// 采集的图像数量 (将从配置文件读取)
-// const int NUM_IMAGES = 30; 
+void capture_loop(const std::string& config_path, const std::string& left_folder, const std::string& right_folder) 
+{
 
-int main(int argc, char* argv[]) {
-    cv::CommandLineParser parser(argc, argv, keys);
-    if (parser.has("help")) {
-        parser.printMessage();
-        return 0;
-    }
-
-    std::string config_path = parser.get<std::string>("config-path");
-    std::string left_folder = parser.get<std::string>(0);
-    std::string right_folder = parser.get<std::string>(1);
-
-    // 读取标定板配置
+        // 读取标定板配置
     YAML::Node config;
     try {
         config = YAML::LoadFile(config_path);
     } catch (const YAML::BadFile& e) {
-        fmt::print("错误：找不到配置文件 '{}'\n", config_path);
-        return -1;
+        tools::logger()->error("Cannot find config file '{}'", config_path);
+        return;
     }
     
-    // std::string pattern_type = config["pattern_type"].as<std::string>();
+    // 捕获循环的实现
+     // std::string pattern_type = config["pattern_type"].as<std::string>();
     int pattern_cols = config["pattern_cols"].as<int>();
     int pattern_rows = config["pattern_rows"].as<int>();
     cv::Size pattern_size(pattern_cols, pattern_rows);
+
     int left_cam_idx = config["camera"]["left_index"].as<int>();
     int right_cam_idx = config["camera"]["right_index"].as<int>();
-    int num_images = config["num_images"].as<int>();
+    int WIDTH = config["camera"]["width"].as<int>();
+    int HEIGHT = config["camera"]["height"].as<int>();
 
-    // 创建输出文件夹
-    std::filesystem::create_directories(left_folder);
-    std::filesystem::create_directories(right_folder);
+    int num_images = config["num_images"].as<int>();
 
     // 打开两个摄像头，并明确指定使用 V4L2 后端
     cv::VideoCapture cap_left(left_cam_idx, cv::CAP_V4L2);
     cv::VideoCapture cap_right(right_cam_idx, cv::CAP_V4L2);
 
     if (!cap_left.isOpened() || !cap_right.isOpened()) {
-        fmt::print("错误：无法打开摄像头设备\n");
-        return -1;
+        tools::logger()->error("错误：无法打开摄像头设备\n");
+        return ;
     }
 
     // 设置分辨率
@@ -63,8 +56,8 @@ int main(int argc, char* argv[]) {
     cap_right.set(cv::CAP_PROP_FRAME_WIDTH, WIDTH / 2);
     cap_right.set(cv::CAP_PROP_FRAME_HEIGHT, HEIGHT);
 
-    fmt::print("摄像头分辨率设置为: {}x{}\n", (int)cap_left.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap_left.get(cv::CAP_PROP_FRAME_HEIGHT));
-    fmt::print("准备采集 {} 张图像...\n", num_images);
+    tools::logger()->info("摄像头分辨率设置为: {}x{}\n", (int)cap_left.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap_left.get(cv::CAP_PROP_FRAME_HEIGHT));
+    tools::logger()->info("准备采集 {} 张图像...\n", num_images);
 
 
     cv::Mat frame_left, frame_right;
@@ -75,7 +68,7 @@ int main(int argc, char* argv[]) {
         cap_right >> frame_right;
 
         if (frame_left.empty() || frame_right.empty()) {
-            fmt::print("错误：捕获到空帧。\n");
+            tools::logger()->error("错误：捕获到空帧。\n");
             break;
         }
 
@@ -132,10 +125,10 @@ int main(int argc, char* argv[]) {
                 cv::imwrite(filename_L, frame_left); // 保存原始图像
                 cv::imwrite(filename_R, frame_right);
 
-                fmt::print("成功保存图像: {} 和 {}\n", filename_L, filename_R);
+                tools::logger()->info("成功保存图像: {} 和 {}\n", filename_L, filename_R);
                 count++;
             } else {
-                fmt::print("未找到完整的标定板角点，请调整位置后再按 's'。\n");
+                tools::logger()->warn("未找到完整的标定板角点，请调整位置后再按 's'。\n");
             }
         }
     }
@@ -144,5 +137,24 @@ int main(int argc, char* argv[]) {
     cap_right.release();
     cv::destroyAllWindows();
 
+}
+
+
+int main(int argc, char* argv[]) {
+    cv::CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help")) {
+        parser.printMessage();
+        return 0;
+    }
+
+    std::string config_path = parser.get<std::string>("config-path");
+    std::string left_folder = parser.get<std::string>(0);
+    std::string right_folder = parser.get<std::string>(1);
+
+    std::filesystem::create_directories(left_folder);
+    std::filesystem::create_directories(right_folder);
+
+    capture_loop(config_path, left_folder, right_folder);
+   
     return 0;
 }

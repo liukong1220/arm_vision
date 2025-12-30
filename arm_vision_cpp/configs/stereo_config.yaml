@@ -16,6 +16,8 @@ unit_size_mm: 18.0
 camera:
     left_index: 4
     right_index: 2
+    width: 1080
+    height: 640
 
 verify_stereo:
     stereo_params_path: "configs/stereo_params.yaml"
